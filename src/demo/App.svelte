@@ -526,8 +526,8 @@
         max-height: 760px;
         overflow: hidden;
         border-radius: var(--card-border-radius);
-        background: var(--bg-gradient-start);
         outline: 1px solid var(--helium-elevated-10);
+        outline-offset: -1px;
     }
 
     :global(.demo-background-shimmer) {

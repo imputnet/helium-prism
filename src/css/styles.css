@@ -13,7 +13,8 @@
     --bg-surface: #fbfcff;
     --bg-gradient-start: #f4f7ff;
     --bg-gradient-end: #acbbff;
-    --background: var(--bg-gradient-start);
+
+    --background: var(--bg-surface);
 
     --tooltip-bg: #eaedfd;
     --tooltip-shadow: color-mix(in srgb, #9ba6d8 50%, transparent);
@@ -66,7 +67,6 @@
         --bg-surface: #0e1123;
         --bg-gradient-start: #151932;
         --bg-gradient-end: #2d3c7f;
-        --background: var(--bg-gradient-start);
 
         --helium-elevated: #b3beec;
         --glass-filter: blur(12px);
@@ -83,7 +83,7 @@
 }
 
 html {
-    background: var(--bg-gradient-start);
+    background: var(--background);
 }
 
 ::selection {
