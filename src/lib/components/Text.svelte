@@ -58,7 +58,6 @@
 <style>
     .text {
         margin: 0;
-        white-space: var(--text-white-space, pre-line);
     }
 
     .center {

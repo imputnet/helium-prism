@@ -157,12 +157,6 @@ strong {
     font-weight: 600;
 }
 
-h1,
-h2,
-p {
-    white-space: pre-line;
-}
-
 a {
     color: inherit;
     text-underline-offset: 4px;
@@ -205,10 +199,9 @@ button,
     color: var(--primary);
     background-color: var(--helium-elevated-7);
     font-size: 16px;
-    white-space: nowrap;
     min-height: 38px;
     padding: 9px 16px;
-    border-radius: var(--size);
+    border-radius: calc(var(--size) / 2);
     transition: 0.2s background-color, 0.2s transform, 0.2s opacity;
     will-change: transform;
     display: inline-flex;
@@ -248,12 +241,9 @@ button,
     }
 
     &.card {
-        --text-white-space: normal;
-
         min-height: 0;
         width: 100%;
         text-align: left;
-        white-space: normal;
         border-radius: 14px;
         padding: 14px 18px;
         gap: var(--gap-1);
@@ -263,7 +253,6 @@ button,
         }
 
         & svg {
-            flex: 0 0 auto;
             width: 21px;
             height: 21px;
         }
@@ -288,6 +277,7 @@ button,
     }
 
     & svg {
+        flex: 0 0 auto;
         height: 18px;
         width: 18px;
         stroke-width: 1.8px;
@@ -382,5 +372,15 @@ a:focus-visible {
         --helium-elevated-7: color-mix(in srgb, var(--helium-elevated) 9%, transparent);
 
         backdrop-filter: var(--glass-filter);
+    }
+}
+
+@media screen and (max-width: 535px) {
+    h1 {
+        font-size: 38px;
+    }
+
+    h2 {
+        font-size: 30px;
     }
 }
