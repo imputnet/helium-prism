@@ -1,0 +1,8 @@
+{
+    "name": "helium-prism",
+    "compatibility_date": "2026-05-30",
+    "assets": {
+        "directory": "./demo-dist",
+        "not_found_handling": "404-page"
+    }
+}
