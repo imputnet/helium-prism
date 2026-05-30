@@ -2,11 +2,8 @@
     <img width="1000" alt="Helium Prism" src="https://raw.githubusercontent.com/imputnet/helium-prism/refs/heads/main/docs/prism-splash.png">
 </p>
 
-<p align="center">
-    Shared UI components of
-    <a href="https://github.com/imputnet/helium">Helium</a>
-    web interfaces for Svelte.
-</p>
+## Helium Prism
+Shared UI components of [Helium](https://github.com/imputnet/helium) web interfaces for Svelte.
 
 Prism UI library contains the shared building blocks used by web-based Helium applications and
 websites, such as: typography, buttons, inputs, loading states, icons, and the brand gradient
@@ -14,6 +11,9 @@ shimmer effect.
 
 This library isn't built for use outside of Helium web apps, so it may feel clunky for anything
 else.
+
+Demo: [prism.helium.computer](https://prism.helium.computer/) <br>
+npm: [@imput/helium-prism](https://www.npmjs.com/package/@imput/helium-prism)
 
 ## Installation
 
