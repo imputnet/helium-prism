@@ -3,6 +3,7 @@
 </p>
 
 ## Helium Prism
+
 Shared UI components of [Helium](https://github.com/imputnet/helium) web interfaces for Svelte.
 
 Prism UI library contains the shared building blocks used by web-based Helium applications and
@@ -12,7 +13,7 @@ shimmer effect.
 This library isn't built for use outside of Helium web apps, so it may feel clunky for anything
 else.
 
-Demo: [prism.helium.computer](https://prism.helium.computer/) <br>
+Demo: [prism.helium.computer](https://prism.helium.computer/)\
 npm: [@imput/helium-prism](https://www.npmjs.com/package/@imput/helium-prism)
 
 ## Installation
