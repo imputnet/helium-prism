@@ -94,10 +94,11 @@
     .dropdown {
         --dropdown-padding-inline: 16px;
         --dropdown-icon-size: 18px;
+        --dropdown-height: 40px;
         position: relative;
         width: fit-content;
         max-width: 100%;
-        min-height: 40px;
+        min-height: var(--dropdown-height);
         cursor: pointer;
     }
 
@@ -105,7 +106,7 @@
         cursor: inherit;
         font-size: 16px;
         line-height: 122%;
-        height: 100%;
+        min-height: var(--dropdown-height);
         padding-inline: var(--dropdown-padding-inline);
         padding-right: calc(var(--dropdown-padding-inline) + var(--dropdown-icon-size) + 9px);
         user-select: none;

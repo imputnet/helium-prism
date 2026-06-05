@@ -16,7 +16,9 @@
         rel: relProp,
         ...rest
     }: Props = $props();
-    let target = $derived(targetProp ?? (href.startsWith("#") ? undefined : "_blank"));
+    let url = $derived(new URL(href, document.location.href));
+    let isLocalHref = $derived(url.origin === document.location.origin);
+    let target = $derived(targetProp ?? (isLocalHref ? undefined : "_blank"));
     let rel = $derived(relProp ?? (target ? "noopener noreferrer" : undefined));
 </script>
 
