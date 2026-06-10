@@ -20,7 +20,7 @@
 Components exported from the package:
 
 - `Button`
-- `CardLink`, `OuterLink`
+- `CardLink`, `Link`
 - `Checkbox`, `Dropdown`, `Input`, `SearchBar`, `Toggle`
 - `CopyIcon`, `GradientShimmer`, `HeliumLogo`, `Skeleton`, `Spinner`, `Text`, `Tooltip`
 - Shared icon components listed in [Icons](#icons)
@@ -74,7 +74,7 @@ Text variants are `display`, `title`, `heading`, `subheading`, `body`, and `capt
 
 ```svelte
 <script>
-    import { Button, CardLink, IconArrowRight, IconDownload, OuterLink } from "@imput/helium-prism";
+    import { Button, CardLink, IconArrowRight, IconDownload, Link } from "@imput/helium-prism";
 </script>
 
 <Button>Cancel</Button>
@@ -89,10 +89,10 @@ Text variants are `display`, `title`, `heading`, `subheading`, `body`, and `capt
     <IconArrowRight />
 </Button>
 
-<OuterLink href="https://helium.computer">Helium</OuterLink>
-<OuterLink class="button" href="https://helium.computer">
+<Link href="https://helium.computer">Helium</Link>
+<Link class="button" href="https://helium.computer">
     Button-style link
-</OuterLink>
+</Link>
 
 <CardLink
     title="Read more"
@@ -101,8 +101,8 @@ Text variants are `display`, `title`, `heading`, `subheading`, `body`, and `capt
 />
 ```
 
-`OuterLink` opens non-hash URLs in a new tab by default and adds `noopener noreferrer`. Hash links
-stay on the same page.
+`Link` opens external URLs in a new tab by default and adds `noopener noreferrer`. Relative/local
+links stay on the same page.
 
 ## Inputs
 

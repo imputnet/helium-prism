@@ -9,7 +9,7 @@ export { default as Dropdown } from "./components/Dropdown.svelte";
 export { default as GradientShimmer } from "./components/GradientShimmer.svelte";
 export { default as HeliumLogo } from "./components/HeliumLogo.svelte";
 export { default as Input } from "./components/Input.svelte";
-export { default as OuterLink } from "./components/OuterLink.svelte";
+export { default as Link } from "./components/Link.svelte";
 export { default as SearchBar } from "./components/SearchBar.svelte";
 export { default as Skeleton } from "./components/Skeleton.svelte";
 export { default as Spinner } from "./components/Spinner.svelte";
