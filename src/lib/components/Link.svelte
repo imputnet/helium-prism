@@ -16,18 +16,26 @@
         rel: relProp,
         ...rest
     }: Props = $props();
-    let url = $derived(new URL(href, document.location.href));
-    let isLocalHref = $derived(url.origin === document.location.origin);
-    let target = $derived(targetProp ?? (isLocalHref ? undefined : "_blank"));
-    let rel = $derived(relProp ?? (target ? "noopener noreferrer" : undefined));
+
+    const isExternalHref = (href: string) => {
+        try {
+            return new URL(href, location.href).origin !== location.origin;
+        } catch {
+            return true;
+        }
+    };
+
+    let isExternal = $derived(isExternalHref(href));
+    let target = $derived(isExternal ? (targetProp ?? "_blank") : undefined);
+    let rel = $derived(isExternal ? (relProp ?? "noopener noreferrer") : undefined);
 </script>
 
-<a class={["outer-link", className]} {href} {target} {rel} {...rest}>
+<a class={["p-link", className]} {href} {target} {rel} {...rest}>
     {@render children()}
 </a>
 
 <style>
-    .outer-link.button:not(.card) {
+    .p-link.button:not(.card) {
         width: fit-content;
     }
 </style>

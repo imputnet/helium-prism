@@ -51,14 +51,14 @@
                 Prism: shared UI primitives for Helium web interfaces.
             </Prism.Text>
             <div class="row">
-                <Prism.OuterLink class="button primary" href="https://helium.computer/">
+                <Prism.Link class="button primary" href="https://helium.computer/">
                     <Prism.IconArrowRight />
                     Get Helium Browser
-                </Prism.OuterLink>
-                <Prism.OuterLink class="button" href="https://github.com/imputnet/helium-prism">
+                </Prism.Link>
+                <Prism.Link class="button" href="https://github.com/imputnet/helium-prism">
                     <Prism.IconExternalLink />
                     Prism on GitHub
-                </Prism.OuterLink>
+                </Prism.Link>
             </div>
         </div>
     </section>
@@ -188,15 +188,14 @@
 
         <div class="control-group">
             <div class="row">
-                <Prism.OuterLink href="https://helium.computer"
-                >Plain external link</Prism.OuterLink>
-                <Prism.OuterLink href="#misc">Hash link</Prism.OuterLink>
+                <Prism.Link href="https://helium.computer">Plain external link</Prism.Link>
+                <Prism.Link href="#misc">Hash link</Prism.Link>
             </div>
         </div>
-        <Prism.OuterLink class="button" href="https://helium.computer">
+        <Prism.Link class="button" href="https://helium.computer">
             <Prism.IconExternalLink />
             Button-style external link
-        </Prism.OuterLink>
+        </Prism.Link>
     </section>
 
     <section class="showcase-section">
