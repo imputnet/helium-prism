@@ -3,20 +3,6 @@
     import type { ClassValue } from "svelte/elements";
     import * as Shimmer from "../gradient-shimmer";
 
-    const GRAIN_SIZE = 180;
-
-    type Colors = {
-        alpha: number;
-        grainAlpha: number;
-        grainLuminance: number;
-        grainContrast: number;
-        grainSaturation: number;
-        introAlpha: number;
-        start: string;
-        highlight: string;
-        speedUpShineBoost: number;
-    };
-
     type Props = {
         intro?: boolean;
         background?: boolean;
@@ -31,40 +17,8 @@
 
     let canvas: HTMLCanvasElement;
     let shimmerController: Shimmer.GradientShimmerControls | null = null;
-
-    const createGrainPattern = (
-        context: CanvasRenderingContext2D,
-        colors: Colors,
-    ) => {
-        const grainCanvas = document.createElement("canvas");
-        const grainContext = grainCanvas.getContext("2d")!;
-
-        grainCanvas.width = GRAIN_SIZE;
-        grainCanvas.height = GRAIN_SIZE;
-
-        const imageData = grainContext.createImageData(
-            GRAIN_SIZE,
-            GRAIN_SIZE,
-        );
-        const pixels = imageData.data;
-
-        for (let index = 0; index < pixels.length; index += 4) {
-            const luminance = colors.grainLuminance
-                + (Math.random() - 0.5) * colors.grainContrast;
-            const redShift = (Math.random() - 0.5) * colors.grainSaturation;
-            const greenShift = (Math.random() - 0.5) * colors.grainSaturation;
-            const blueShift = (Math.random() - 0.5) * colors.grainSaturation;
-
-            pixels[index] = Shimmer.clamp(luminance + redShift, 0, 255);
-            pixels[index + 1] = Shimmer.clamp(luminance + greenShift, 0, 255);
-            pixels[index + 2] = Shimmer.clamp(luminance + blueShift, 0, 255);
-            pixels[index + 3] = 255;
-        }
-
-        grainContext.putImageData(imageData, 0, 0);
-
-        return context.createPattern(grainCanvas, "repeat")!;
-    };
+    let hasStaticFallback = $state(false);
+    let visible = $state(false);
 
     export function intro() {
         shimmerController?.intro();
@@ -74,109 +28,15 @@
         shimmerController?.emphasize();
     }
 
-    const drawGrain = (
-        context: CanvasRenderingContext2D,
-        pattern: CanvasPattern,
-        size: Shimmer.Size,
-        colors: Colors,
-    ) => {
-        context.save();
-        context.globalAlpha = colors.grainAlpha;
-        context.globalCompositeOperation = "overlay";
-        context.fillStyle = pattern;
-        context.fillRect(0, 0, size.width, size.height);
-        context.restore();
-    };
-
-    const drawStripe = (
-        context: CanvasRenderingContext2D,
-        stripe: Shimmer.Stripe,
-        index: number,
-        stripeWidth: number,
-        size: Shimmer.Size,
-        colors: Colors,
-        time: number,
-        introAnimation: Shimmer.IntroAnimation | null,
-        stripeCount: number,
-        wavePhase: number,
-        secondaryWavePhase: number,
-        shineProgress: number,
-    ) => {
-        const revealProgress = Shimmer.getIntroRevealProgress(
-            time,
-            introAnimation,
-            index,
-            stripeCount,
-        );
-        const idleProgress = Shimmer.getIntroIdleProgress(
-            time,
-            introAnimation,
-            index,
-            stripeCount,
-        );
-        const alpha = colors.introAlpha
-            + (colors.alpha - colors.introAlpha) * idleProgress;
-        const x = Shimmer.snapToDevicePixel(index * stripeWidth, size.dpr);
-        const nextX = index === stripeCount - 1
-            ? size.width
-            : Shimmer.snapToDevicePixel((index + 1) * stripeWidth, size.dpr);
-        const width = nextX - x;
-        const introCenter = Shimmer.lerp(
-            Shimmer.INTRO.startCenter,
-            Shimmer.INTRO.idleCenter,
-            revealProgress,
-        );
-        const idleCenter = Shimmer.getIdleCenter(
-            stripe,
-            wavePhase,
-            secondaryWavePhase,
-        );
-        const center = introCenter + (idleCenter - introCenter) * idleProgress;
-        const bandStart = Shimmer.clamp(
-            center - Shimmer.GRADIENT.bandWidth,
-            Shimmer.GRADIENT.minStop,
-            Shimmer.GRADIENT.maxStop,
-        );
-        const bandEnd = Shimmer.clamp(
-            center + Shimmer.GRADIENT.bandWidth,
-            Shimmer.GRADIENT.minStop,
-            Shimmer.GRADIENT.maxStop,
-        );
-        const gradient = context.createLinearGradient(
-            x,
-            size.height * -0.35,
-            nextX,
-            size.height * 1.35,
-        );
-
-        context.globalAlpha = alpha;
-        context.fillStyle = colors.start;
-        context.fillRect(x, 0, width, size.height);
-
-        gradient.addColorStop(0, colors.highlight);
-        gradient.addColorStop(bandStart, colors.start);
-        gradient.addColorStop(center, colors.highlight);
-        gradient.addColorStop(bandEnd, colors.start);
-        gradient.addColorStop(1, colors.start);
-
-        context.globalAlpha = Shimmer.clamp(
-            alpha * (1 + shineProgress * colors.speedUpShineBoost),
-        ) * revealProgress;
-        context.fillStyle = gradient;
-        context.fillRect(x, 0, width, size.height);
-    };
-
     onMount(() => {
-        const context = canvas.getContext("2d", {
-            alpha: true,
-            colorSpace: "display-p3",
-        });
+        const renderer = Shimmer.createGradientShimmerRenderer(canvas);
 
-        if (!context) {
+        if (!renderer) {
+            hasStaticFallback = true;
+            visible = true;
             return;
         }
 
-        const stripes: Shimmer.Stripe[] = [];
         const colorSchemeQuery = window.matchMedia(
             "(prefers-color-scheme: dark)",
         );
@@ -184,10 +44,6 @@
             "(prefers-reduced-motion: reduce)",
         );
 
-        let size: Shimmer.Size;
-        let stripeWidth: number;
-        let colors: Colors;
-        let grainPattern: CanvasPattern | null = null;
         let animationFrame: number | null = null;
         let resizeFrame: number | null = null;
         let introAnimation: Shimmer.IntroAnimation | null = null;
@@ -212,6 +68,48 @@
 
             cancelAnimationFrame(animationFrame);
             animationFrame = null;
+        };
+
+        const drawFrame = (time: number) => {
+            const reducedMotion = reducedMotionQuery.matches;
+            const deltaSeconds = reducedMotion || lastFrameTime === null
+                ? 0
+                : Math.min((time - lastFrameTime) / 1000, 0.064);
+            const speedUpState = Shimmer.updateSpeedUpAnimation(
+                time,
+                speedUpAnimation,
+            );
+            const activeIntroAnimation = reducedMotion ? null : introAnimation;
+
+            lastFrameTime = reducedMotion ? null : time;
+            speedUpAnimation = reducedMotion ? null : speedUpState.animation;
+
+            if (!reducedMotion) {
+                wavePhase += Shimmer.IDLE_WAVE.speed
+                    * speedUpState.multiplier
+                    * deltaSeconds;
+                secondaryWavePhase += Shimmer.IDLE_WAVE.secondarySpeed
+                    * speedUpState.multiplier
+                    * deltaSeconds;
+            }
+
+            renderer.render({
+                time,
+                wavePhase,
+                secondaryWavePhase,
+                introStartedAt: activeIntroAnimation?.startedAt ?? null,
+                shineProgress: reducedMotion ? 0 : speedUpState.shineProgress,
+            });
+
+            if (
+                Shimmer.isIntroComplete(
+                    time,
+                    introAnimation,
+                    renderer.getStripeCount(),
+                )
+            ) {
+                introAnimation = null;
+            }
         };
 
         const startIntro = () => {
@@ -244,48 +142,9 @@
             emphasize: startWaveSpeedUp,
         };
 
-        const readColors = () => {
-            const styles = getComputedStyle(canvas);
-
-            colors = {
-                alpha: Shimmer.readCssNumber(styles, "--shimmer-alpha"),
-                grainAlpha: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-grain-alpha",
-                ),
-                grainLuminance: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-grain-luminance",
-                ),
-                grainContrast: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-grain-contrast",
-                ),
-                grainSaturation: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-grain-saturation",
-                ),
-                introAlpha: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-intro-alpha",
-                ),
-                start: Shimmer.readCssString(styles, "--shimmer-start"),
-                highlight: Shimmer.readCssString(
-                    styles,
-                    "--shimmer-highlight",
-                ),
-                speedUpShineBoost: Shimmer.readCssNumber(
-                    styles,
-                    "--shimmer-speed-up-shine-boost",
-                ),
-            };
-            grainPattern = createGrainPattern(context, colors);
-        };
-
         const applyResize = () => {
-            size = Shimmer.resizeCanvas(canvas, context);
-            stripeWidth = Shimmer.syncStripeCount(stripes, size.width);
-            readColors();
+            renderer.resize();
+            renderer.readColors();
         };
 
         const scheduleResize = () => {
@@ -294,58 +153,6 @@
                 applyResize();
                 drawFrame(time);
             });
-        };
-
-        const drawFrame = (time: number) => {
-            const reducedMotion = reducedMotionQuery.matches;
-            const deltaSeconds = reducedMotion || lastFrameTime === null
-                ? 0
-                : Math.min((time - lastFrameTime) / 1000, 0.064);
-            const speedUpState = Shimmer.updateSpeedUpAnimation(
-                time,
-                speedUpAnimation,
-            );
-            const activeIntroAnimation = reducedMotion ? null : introAnimation;
-
-            lastFrameTime = reducedMotion ? null : time;
-            speedUpAnimation = reducedMotion ? null : speedUpState.animation;
-
-            if (!reducedMotion) {
-                wavePhase += Shimmer.IDLE_WAVE.speed
-                    * speedUpState.multiplier
-                    * deltaSeconds;
-                secondaryWavePhase += Shimmer.IDLE_WAVE.secondarySpeed
-                    * speedUpState.multiplier
-                    * deltaSeconds;
-            }
-
-            context.globalAlpha = 1;
-            context.clearRect(0, 0, size.width, size.height);
-
-            for (const [index, stripe] of stripes.entries()) {
-                drawStripe(
-                    context,
-                    stripe,
-                    index,
-                    stripeWidth,
-                    size,
-                    colors,
-                    time,
-                    activeIntroAnimation,
-                    stripes.length,
-                    wavePhase,
-                    secondaryWavePhase,
-                    reducedMotion ? 0 : speedUpState.shineProgress,
-                );
-            }
-
-            if (grainPattern) {
-                drawGrain(context, grainPattern, size, colors);
-            }
-
-            if (Shimmer.isIntroComplete(time, introAnimation, stripes.length)) {
-                introAnimation = null;
-            }
         };
 
         const draw = (time: number) => {
@@ -371,6 +178,11 @@
             startIntro();
         }
 
+        // Delay the reveal until after the first WebGL frame has been painted.
+        drawFrame(performance.now());
+        requestAnimationFrame(() => {
+            visible = true;
+        });
         shimmerController = controller;
 
         const resizeObserver = new ResizeObserver(scheduleResize);
@@ -379,7 +191,7 @@
         const scheduleColorRead = () => {
             cancelResizeFrame();
             resizeFrame = requestAnimationFrame((time) => {
-                readColors();
+                renderer.readColors();
                 drawFrame(time);
             });
         };
@@ -410,19 +222,28 @@
                 shimmerController = null;
             }
 
+            visible = false;
             cancelAnimation();
             cancelResizeFrame();
             resizeObserver.disconnect();
             themeObserver.disconnect();
             colorSchemeQuery.removeEventListener("change", scheduleColorRead);
             reducedMotionQuery.removeEventListener("change", updateMotionPreference);
+            renderer.dispose();
         };
     });
 </script>
 
 <canvas
     bind:this={canvas}
-    class={[background && "background", className]}
+    class={[
+        {
+            background,
+            fallback: hasStaticFallback,
+            visible,
+        },
+        className,
+    ]}
     aria-hidden="true"
 ></canvas>
 
@@ -442,7 +263,17 @@
         z-index: 0;
         width: 100%;
         height: 100%;
+        opacity: 0;
         pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    canvas.visible {
+        opacity: 1;
+    }
+
+    canvas.fallback {
+        background: var(--intro-gradient);
     }
 
     canvas.background {
@@ -462,6 +293,12 @@
             --shimmer-grain-saturation: 32;
             --shimmer-intro-alpha: 1;
             --shimmer-speed-up-shine-boost: 0.15;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        canvas {
+            transition-duration: 1ms;
         }
     }
 </style>

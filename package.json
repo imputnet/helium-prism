@@ -1,6 +1,6 @@
 {
     "name": "@imput/helium-prism",
-    "version": "0.1.5",
+    "version": "0.1.6",
     "description": "Shared UI components of Helium web interfaces for Svelte",
     "type": "module",
     "packageManager": "pnpm@11.5.0",
@@ -38,6 +38,9 @@
         "pack:dry-run": "pnpm pack --dry-run",
         "package": "svelte-package --input src/lib --tsconfig ./tsconfig.json && cp src/css/styles.css dist/styles.css",
         "prepack": "pnpm run package"
+    },
+    "dependencies": {
+        "ogl": "^1.0.11"
     },
     "peerDependencies": {
         "svelte": ">=5.20.0"

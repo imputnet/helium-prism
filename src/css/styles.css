@@ -13,6 +13,14 @@
     --bg-surface: #fbfcff;
     --bg-gradient-start: #f4f7ff;
     --bg-gradient-end: #acbbff;
+    --intro-gradient-start: #e3e8ff;
+    --intro-gradient-end: #f4f7ff;
+
+    --intro-gradient: linear-gradient(
+        180deg,
+        var(--intro-gradient-start) 0%,
+        var(--intro-gradient-end) 100%
+    );
 
     --background: var(--bg-surface);
 
@@ -66,6 +74,8 @@
         --bg-surface: #0e1123;
         --bg-gradient-start: #151932;
         --bg-gradient-end: #2d3c7f;
+        --intro-gradient-start: var(--bg-gradient-start);
+        --intro-gradient-end: var(--bg-gradient-end);
 
         --helium-elevated: #b3beec;
         --glass-filter: blur(12px);
