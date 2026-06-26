@@ -17,6 +17,7 @@
 
     let canvas: HTMLCanvasElement;
     let shimmerController: Shimmer.GradientShimmerControls | null = null;
+    let visible = $state(false);
 
     export function intro() {
         shimmerController?.intro();
@@ -174,6 +175,11 @@
             startIntro();
         }
 
+        // Delay the reveal until after the first WebGL frame has been painted.
+        drawFrame(performance.now());
+        requestAnimationFrame(() => {
+            visible = true;
+        });
         shimmerController = controller;
 
         const resizeObserver = new ResizeObserver(scheduleResize);
@@ -213,6 +219,7 @@
                 shimmerController = null;
             }
 
+            visible = false;
             cancelAnimation();
             cancelResizeFrame();
             resizeObserver.disconnect();
@@ -226,7 +233,7 @@
 
 <canvas
     bind:this={canvas}
-    class={[background && "background", className]}
+    class={[background && "background", visible && "visible", className]}
     aria-hidden="true"
 ></canvas>
 
@@ -246,7 +253,13 @@
         z-index: 0;
         width: 100%;
         height: 100%;
+        opacity: 0;
         pointer-events: none;
+        transition: opacity 0.3s;
+    }
+
+    canvas.visible {
+        opacity: 1;
     }
 
     canvas.background {
@@ -266,6 +279,12 @@
             --shimmer-grain-saturation: 32;
             --shimmer-intro-alpha: 1;
             --shimmer-speed-up-shine-boost: 0.15;
+        }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        canvas {
+            transition-duration: 1ms;
         }
     }
 </style>
