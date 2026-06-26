@@ -39,6 +39,9 @@
         "package": "svelte-package --input src/lib --tsconfig ./tsconfig.json && cp src/css/styles.css dist/styles.css",
         "prepack": "pnpm run package"
     },
+    "dependencies": {
+        "ogl": "^1.0.11"
+    },
     "peerDependencies": {
         "svelte": ">=5.20.0"
     },
