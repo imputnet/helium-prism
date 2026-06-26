@@ -17,6 +17,7 @@
 
     let canvas: HTMLCanvasElement;
     let shimmerController: Shimmer.GradientShimmerControls | null = null;
+    let hasStaticFallback = $state(false);
     let visible = $state(false);
 
     export function intro() {
@@ -31,6 +32,8 @@
         const renderer = Shimmer.createGradientShimmerRenderer(canvas);
 
         if (!renderer) {
+            hasStaticFallback = true;
+            visible = true;
             return;
         }
 
@@ -233,7 +236,14 @@
 
 <canvas
     bind:this={canvas}
-    class={[background && "background", visible && "visible", className]}
+    class={[
+        {
+            background,
+            fallback: hasStaticFallback,
+            visible,
+        },
+        className,
+    ]}
     aria-hidden="true"
 ></canvas>
 
@@ -260,6 +270,10 @@
 
     canvas.visible {
         opacity: 1;
+    }
+
+    canvas.fallback {
+        background: var(--intro-gradient);
     }
 
     canvas.background {
