@@ -235,6 +235,17 @@
                 <Prism.IconArrowRight />
             </Prism.Button>
 
+            <Prism.Button card disabled>
+                <Prism.IconCheck />
+                <div class="card-button-text">
+                    <Prism.Text variant="subheading">Disabled card with icons</Prism.Text>
+                    <Prism.Text variant="body"
+                    >A card action can show leading and trailing icons together. Card's text can
+                        also be very long, so it has to be split into several lines.</Prism.Text>
+                </div>
+                <Prism.IconArrowRight />
+            </Prism.Button>
+
             <Prism.CardLink
                 title="External link"
                 desc="Outer link action card with supporting text."
@@ -268,6 +279,16 @@
             <Prism.Toggle
                 bind:checked={toggle4}
                 name="Use ⌘+S to toggle vertical tabs in Vertical layout, and even more text to make it wrap to next line"
+            />
+            <Prism.Toggle
+                disabled
+                name="Disabled or inactive feature"
+                desc="With a description"
+            />
+            <Prism.Toggle
+                disabled
+                name="Inactive but implicitly enabled feature"
+                desc="With a description"
             />
         </div>
     </section>
