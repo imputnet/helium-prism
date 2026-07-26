@@ -30,7 +30,7 @@
         const rect = anchorElement.getBoundingClientRect();
 
         tooltipX = rect.left;
-        tooltipY = rect.top - offsetY;
+        tooltipY = rect.bottom - offsetY;
     };
 
     $effect(() => {
@@ -51,7 +51,7 @@
     onpointerenter={() => (visible = true)}
     onpointerleave={() => (visible = false)}
     onfocusin={() => {
-        updatePositionFromAnchor();
+        if (!visible) updatePositionFromAnchor();
         visible = true;
     }}
     onfocusout={() => (visible = false)}

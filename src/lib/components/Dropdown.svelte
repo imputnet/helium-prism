@@ -117,6 +117,11 @@
         color: var(--tertiary);
     }
 
+    select :global(option),
+    select :global(optgroup) {
+        background-color: var(--background);
+    }
+
     .dropdown-icon {
         position: absolute;
         right: var(--dropdown-padding-inline);

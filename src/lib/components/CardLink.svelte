@@ -6,10 +6,11 @@
         title: string;
         desc: string;
         href: string;
+        disabled?: boolean;
         class?: ClassValue;
     };
 
-    const { title, desc, href, class: className }: Props = $props();
+    const { title, desc, href, disabled, class: className }: Props = $props();
 </script>
 
 <a
@@ -17,13 +18,16 @@
         {
             button: true,
             card: true,
+            disabled,
             "card-link": true,
         },
         className,
     ]}
-    {href}
+    href={disabled ? undefined : href}
     target="_blank"
     rel="noopener noreferrer"
+    aria-disabled={disabled}
+    tabindex={disabled ? -1 : undefined}
 >
     <div class="link-text">
         <h4>{title}</h4>
