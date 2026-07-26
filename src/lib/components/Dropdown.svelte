@@ -10,7 +10,7 @@
     };
     type NativeSelectProps = Omit<
         HTMLSelectAttributes,
-        "aria-label" | "class" | "id" | "size" | "value"
+        "aria-label" | "class" | "size" | "value"
     >;
     type DropdownContentProps =
         | {
@@ -30,7 +30,6 @@
         };
 
     type Props = NativeSelectProps & {
-        id: string;
         "aria-label": string;
         class?: ClassValue;
         value?: string;
@@ -39,7 +38,6 @@
     } & DropdownContentProps;
 
     let {
-        id,
         value = $bindable(""),
         width,
         select = $bindable(),
@@ -66,7 +64,6 @@
     <select
         bind:this={select}
         bind:value
-        {id}
         class={!value && placeholder ? "placeholder" : undefined}
         aria-label={ariaLabel}
         {disabled}
