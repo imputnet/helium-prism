@@ -251,6 +251,12 @@
                 desc="Outer link action card with supporting text."
                 href="https://helium.computer"
             />
+            <Prism.CardLink
+                title="Disabled card link"
+                desc="Outer link action card with supporting text."
+                href="https://helium.computer"
+                disabled
+            />
         </div>
     </section>
 
