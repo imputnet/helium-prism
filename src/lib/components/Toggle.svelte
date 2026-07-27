@@ -87,7 +87,7 @@
         height: 28px;
         border-radius: 50px;
         background-color: var(--helium-elevated-30);
-        transition: background-color 0.25s;
+        transition: background-color 0.25s, opacity 0.2s;
 
         & .runner {
             width: 22px;

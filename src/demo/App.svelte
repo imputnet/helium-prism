@@ -287,13 +287,13 @@
                 name="Use ⌘+S to toggle vertical tabs in Vertical layout, and even more text to make it wrap to next line"
             />
             <Prism.Toggle
-                disabled
-                name="Disabled or inactive feature"
+                disabled={toggle3}
+                name="Disabled or inactive feature, managed by toggle3"
                 desc="With a description"
             />
             <Prism.Toggle
-                disabled
-                name="Inactive but implicitly enabled feature"
+                disabled={toggle3}
+                name="Inactive but implicitly enabled feature, managed by toggle3"
                 desc="With a description"
             />
         </div>
