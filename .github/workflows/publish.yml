@@ -1,24 +1,26 @@
-name: Publish to npm
+name: Publish on version bump
 
 on:
-  release:
-    types:
-      - published
+  push:
+    branches:
+      - main
 
-permissions:
-  contents: read
-  id-token: write
+concurrency:
+  group: publish
+  cancel-in-progress: false
 
 jobs:
   publish:
-    name: Publish to npm
+    name: Publish package
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-
-      - name: Set up pnpm
-        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+        with:
+          fetch-depth: 0
 
       - name: Set up Node.js
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
@@ -27,25 +29,61 @@ jobs:
           package-manager-cache: false
           registry-url: https://registry.npmjs.org
 
+      - name: Check release state
+        id: version
+        run: |
+          package_name="$(node -p "require('./package.json').name")"
+          package_version="$(node -p "require('./package.json').version")"
+          latest_tag="$(git tag --list 'v[0-9]*' --sort=-version:refname | head -n 1)"
+          latest_version="${latest_tag#v}"
+
+          if [[ -n "$latest_version" ]]; then
+            newest_version="$(printf '%s\n' "$latest_version" "$package_version" | sort -V | tail -n 1)"
+            if [[ "$newest_version" != "$package_version" ]]; then
+              echo "::notice::Package version $package_version is not newer than $latest_tag; skipping release."
+              exit 0
+            fi
+          fi
+
+          if npm view "$package_name@$package_version" version >/dev/null 2>&1; then
+            echo "::notice::$package_name@$package_version is already published; skipping release."
+            exit 0
+          fi
+
+          echo "tag=v$package_version" >> "$GITHUB_OUTPUT"
+
+          if [[ "$package_version" == "$latest_version" ]]; then
+            echo "::notice::Release $latest_tag exists but the package is unpublished; retrying npm publish."
+          else
+            echo "create=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Set up pnpm
+        if: steps.version.outputs.tag != ''
+        uses: pnpm/action-setup@0ebf47130e4866e96fce0953f49152a61190b271 # v6.0.9
+
       - name: Install dependencies
+        if: steps.version.outputs.tag != ''
         run: pnpm install --frozen-lockfile
 
       - name: Check package
+        if: steps.version.outputs.tag != ''
         run: pnpm check
 
-      - name: Verify release version
-        shell: bash
-        run: |
-          package_version="$(node -p "require('./package.json').version")"
-          release_version="${GITHUB_REF_NAME#v}"
-
-          if [[ "$release_version" != "$package_version" ]]; then
-            echo "::error::Release tag '$GITHUB_REF_NAME' does not match package version '$package_version'."
-            exit 1
-          fi
-
       - name: Build package
+        if: steps.version.outputs.tag != ''
         run: pnpm run package
 
+      - name: Create release
+        if: steps.version.outputs.create == 'true'
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        with:
+          token: ${{ github.token }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: ${{ steps.version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+
       - name: Publish package
+        if: steps.version.outputs.tag != ''
         run: npm publish --access public --ignore-scripts
