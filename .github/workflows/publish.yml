@@ -82,7 +82,6 @@ jobs:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.tag }}
           target_commitish: ${{ github.sha }}
-          generate_release_notes: true
 
       - name: Publish package
         if: steps.version.outputs.tag != ''
