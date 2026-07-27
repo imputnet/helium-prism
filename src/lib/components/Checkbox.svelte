@@ -20,14 +20,12 @@
             "aria-labelledby": string;
         };
 
-    type Props = Omit<HTMLInputAttributes, "class" | "id" | "type" | "checked"> & {
-        id: string;
+    type Props = Omit<HTMLInputAttributes, "class" | "type" | "checked"> & {
         class?: ClassValue;
         checked?: boolean;
     } & CheckboxLabelProps;
 
     let {
-        id,
         checked = $bindable(false),
         children,
         class: className,
@@ -62,7 +60,7 @@
         className,
     ]}
 >
-    <input {id} type="checkbox" bind:checked {disabled} {...rest} />
+    <input type="checkbox" bind:checked {disabled} {...rest} />
     <span class="checkbox-control" aria-hidden="true">
         <IconCheck />
     </span>

@@ -4,11 +4,10 @@
 
     type NativeInputProps = Omit<
         HTMLInputAttributes,
-        "aria-label" | "class" | "id" | "input" | "size" | "value" | "width"
+        "aria-label" | "class" | "input" | "size" | "value" | "width"
     >;
 
     type Props = NativeInputProps & {
-        id: string;
         "aria-label": string;
         class?: ClassValue;
         value?: HTMLInputAttributes["value"];
@@ -20,7 +19,6 @@
     };
 
     let {
-        id,
         value = $bindable(),
         small = false,
         width,
@@ -54,7 +52,6 @@
     <input
         bind:this={input}
         bind:value
-        {id}
         {placeholder}
         aria-label={ariaLabel}
         {disabled}
