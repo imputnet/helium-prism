@@ -473,19 +473,46 @@ export const createGradientShimmerRenderer = (
         return null;
     }
 
-    let size = initialSize;
-    let stripes = getStripeMetrics(size.width);
-    let renderMetrics = getRenderMetrics(size, stripes);
-    let colors = initialColors;
+    let stripes = getStripeMetrics(initialSize.width);
+
+    const applySize = (size: Size) => {
+        stripes = getStripeMetrics(size.width);
+        const renderMetrics = getRenderMetrics(size, stripes);
+
+        uniforms.u_size.value = [size.width, size.height];
+        uniforms.u_inverse_dpr.value = renderMetrics.inverseDpr;
+        uniforms.u_stripe_max_index.value = stripes.maxIndex;
+        uniforms.u_stripe_width.value = stripes.width;
+        uniforms.u_inverse_stripe_width.value = stripes.inverseWidth;
+        uniforms.u_gradient_top.value = renderMetrics.gradientTop;
+        uniforms.u_gradient_vertical_span.value = renderMetrics.gradientVerticalSpan;
+        uniforms.u_inverse_gradient_denominator.value =
+            renderMetrics.inverseGradientDenominator;
+        uniforms.u_intro_center_index.value = stripes.introCenterIndex;
+        uniforms.u_intro_center_distance.value = stripes.introCenterDistance;
+    };
+
+    const applyColors = (colors: ShaderColors) => {
+        uniforms.u_start_color.value = colors.start;
+        uniforms.u_highlight_delta.value = colors.highlightDelta;
+        uniforms.u_alpha.value = colors.alpha;
+        uniforms.u_intro_alpha.value = colors.introAlpha;
+        uniforms.u_speed_up_shine_boost.value = colors.speedUpShineBoost;
+        uniforms.u_grain_alpha.value = colors.grainAlpha;
+        uniforms.u_grain_luminance.value = colors.grainLuminance;
+        uniforms.u_grain_contrast.value = colors.grainContrast;
+        uniforms.u_grain_saturation.value = colors.grainSaturation;
+    };
+
+    applySize(initialSize);
+    applyColors(initialColors);
 
     const resize = () => {
-        size = resizeOglCanvas(canvas, renderer);
-        stripes = getStripeMetrics(size.width);
-        renderMetrics = getRenderMetrics(size, stripes);
+        applySize(resizeOglCanvas(canvas, renderer));
     };
 
     const readColors = () => {
-        colors = readShaderColors(canvas, colorContext);
+        applyColors(readShaderColors(canvas, colorContext));
     };
 
     return {
@@ -498,15 +525,6 @@ export const createGradientShimmerRenderer = (
             introStartedAt,
             shineProgress,
         }) => {
-            uniforms.u_size.value = [size.width, size.height];
-            uniforms.u_inverse_dpr.value = renderMetrics.inverseDpr;
-            uniforms.u_stripe_max_index.value = stripes.maxIndex;
-            uniforms.u_stripe_width.value = stripes.width;
-            uniforms.u_inverse_stripe_width.value = stripes.inverseWidth;
-            uniforms.u_gradient_top.value = renderMetrics.gradientTop;
-            uniforms.u_gradient_vertical_span.value = renderMetrics.gradientVerticalSpan;
-            uniforms.u_inverse_gradient_denominator.value =
-                renderMetrics.inverseGradientDenominator;
             uniforms.u_wave_phase.value = wavePhase;
             uniforms.u_secondary_wave_phase.value = secondaryWavePhase;
             uniforms.u_intro_active.value = introStartedAt === null ? 0 : 1;
@@ -514,17 +532,6 @@ export const createGradientShimmerRenderer = (
                 ? 0
                 : time - introStartedAt - INTRO.delay;
             uniforms.u_shine_progress.value = shineProgress;
-            uniforms.u_intro_center_index.value = stripes.introCenterIndex;
-            uniforms.u_intro_center_distance.value = stripes.introCenterDistance;
-            uniforms.u_start_color.value = colors.start;
-            uniforms.u_highlight_delta.value = colors.highlightDelta;
-            uniforms.u_alpha.value = colors.alpha;
-            uniforms.u_intro_alpha.value = colors.introAlpha;
-            uniforms.u_speed_up_shine_boost.value = colors.speedUpShineBoost;
-            uniforms.u_grain_alpha.value = colors.grainAlpha;
-            uniforms.u_grain_luminance.value = colors.grainLuminance;
-            uniforms.u_grain_contrast.value = colors.grainContrast;
-            uniforms.u_grain_saturation.value = colors.grainSaturation;
 
             renderer.render({
                 scene: mesh,
