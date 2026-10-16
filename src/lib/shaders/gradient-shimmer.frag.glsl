@@ -25,6 +25,7 @@ uniform float u_grain_alpha;
 uniform float u_grain_luminance;
 uniform float u_grain_contrast;
 uniform float u_grain_saturation;
+uniform sampler2D u_grain_noise;
 
 uniform float u_gradient_band_width;
 uniform float u_gradient_min_stop;
@@ -43,13 +44,6 @@ uniform float u_idle_primary_amplitude;
 uniform float u_idle_secondary_amplitude;
 
 const float GRAIN_SIZE = 180.0;
-const vec2 NOISE_HASH_SCALE = vec2(127.1, 311.7);
-const float NOISE_HASH_OFFSET = 43758.5;
-const mat3x2 NOISE_COLOR_OFFSETS = mat3x2(
-    vec2(17.0, 3.0),
-    vec2(7.0, 29.0),
-    vec2(31.0, 11.0)
-);
 
 out vec4 fragment_color;
 
@@ -83,10 +77,6 @@ float introIdleProgress(float delayed_elapsed) {
                 u_intro_idle_blend_duration_inverse
         )
     );
-}
-
-float hashNoise(vec2 value) {
-    return fract(sin(dot(value, NOISE_HASH_SCALE)) * NOISE_HASH_OFFSET);
 }
 
 vec3 overlayBlend(vec3 base, vec3 blend) {
@@ -186,14 +176,13 @@ void main() {
         u_start_color * alpha * (1.0 - gradient_alpha)
     ) / max(out_alpha, 0.0001);
 
-    vec2 grain_position = floor(mod(css_position, GRAIN_SIZE));
-    float luminance = u_grain_luminance +
-        (hashNoise(grain_position) - 0.5) * u_grain_contrast;
-    vec3 color_shift = vec3(
-        hashNoise(grain_position + NOISE_COLOR_OFFSETS[0]) - 0.5,
-        hashNoise(grain_position + NOISE_COLOR_OFFSETS[1]) - 0.5,
-        hashNoise(grain_position + NOISE_COLOR_OFFSETS[2]) - 0.5
-    ) * u_grain_saturation;
+    ivec2 grain_position = min(
+        ivec2(mod(css_position, GRAIN_SIZE)),
+        ivec2(GRAIN_SIZE - 1.0)
+    );
+    vec4 noise = texelFetch(u_grain_noise, grain_position, 0) - 0.5;
+    float luminance = u_grain_luminance + noise.r * u_grain_contrast;
+    vec3 color_shift = noise.gba * u_grain_saturation;
     vec3 grain = clamp((vec3(luminance) + color_shift) / 255.0, 0.0, 1.0);
 
     color = mix(color, overlayBlend(color, grain), u_grain_alpha);

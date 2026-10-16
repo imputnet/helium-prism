@@ -1,4 +1,4 @@
-import { Mesh, Program, Renderer, Triangle } from "ogl";
+import { Mesh, Program, Renderer, Texture, Triangle } from "ogl";
 import FRAGMENT_SHADER_SOURCE from "./shaders/gradient-shimmer.frag.glsl?raw";
 import VERTEX_SHADER_SOURCE from "./shaders/gradient-shimmer.vert.glsl?raw";
 
@@ -40,6 +40,14 @@ export const IDLE_WAVE = {
 };
 
 const FULL_CIRCLE = Math.PI * 2;
+
+const GRAIN = {
+    size: 180,
+    hashScale: [127.1, 311.7],
+    hashOffset: 43758.5,
+    // Luminance, then the red, green and blue color shifts.
+    channelOffsets: [[0, 0], [17, 3], [7, 29], [31, 11]],
+} as const;
 
 export type IntroAnimation = {
     startedAt: number;
@@ -107,6 +115,27 @@ type RenderMetrics = {
     gradientTop: number;
     gradientVerticalSpan: number;
     inverseGradientDenominator: number;
+};
+
+// Grain is static, so it's hashed once here instead of per pixel every frame.
+const createGrainNoise = () => {
+    const { size, hashScale, hashOffset, channelOffsets } = GRAIN;
+    const data = new Uint8Array(size * size * channelOffsets.length);
+    let index = 0;
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            for (const [offsetX, offsetY] of channelOffsets) {
+                const hash = Math.sin(
+                    (x + offsetX) * hashScale[0] + (y + offsetY) * hashScale[1],
+                ) * hashOffset;
+
+                data[index++] = Math.round((hash - Math.floor(hash)) * 255);
+            }
+        }
+    }
+
+    return data;
 };
 
 type GradientShimmerRenderer = {
@@ -243,7 +272,7 @@ export const isIntroComplete = (
     return time >= completeAt;
 };
 
-const createShaderUniforms = () => ({
+const createShaderUniforms = (grainNoise: Texture) => ({
     u_size: { value: [1, 1] },
     u_inverse_dpr: { value: 1 },
     u_stripe_max_index: { value: 0 },
@@ -266,6 +295,7 @@ const createShaderUniforms = () => ({
     u_grain_luminance: { value: 0 },
     u_grain_contrast: { value: 0 },
     u_grain_saturation: { value: 0 },
+    u_grain_noise: { value: grainNoise },
     u_intro_center_index: { value: 0 },
     u_intro_center_distance: { value: 0 },
     u_gradient_band_width: { value: GRADIENT.bandWidth },
@@ -440,7 +470,16 @@ export const createGradientShimmerRenderer = (
         return null;
     }
 
-    const uniforms = createShaderUniforms();
+    const grainNoise = new Texture(gl, {
+        image: createGrainNoise(),
+        width: GRAIN.size,
+        height: GRAIN.size,
+        generateMipmaps: false,
+        minFilter: gl.NEAREST,
+        magFilter: gl.NEAREST,
+        flipY: false,
+    });
+    const uniforms = createShaderUniforms(grainNoise);
     let program: Program | null = null;
     let geometry: Triangle | null = null;
     let mesh: Mesh | null = null;
@@ -466,6 +505,7 @@ export const createGradientShimmerRenderer = (
     } catch {
         geometry?.remove();
         program?.remove();
+        gl.deleteTexture(grainNoise.texture);
         return null;
     }
 
@@ -544,6 +584,7 @@ export const createGradientShimmerRenderer = (
         dispose: () => {
             geometry.remove();
             program.remove();
+            gl.deleteTexture(grainNoise.texture);
         },
         getStripeCount: () => stripes.count,
     };
