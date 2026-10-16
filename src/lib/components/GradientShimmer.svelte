@@ -115,8 +115,6 @@
 
         const startIntro = () => {
             if (reducedMotionQuery.matches) {
-                introAnimation = null;
-                drawFrame(performance.now());
                 return;
             }
 
@@ -125,8 +123,6 @@
 
         const startWaveSpeedUp = () => {
             if (reducedMotionQuery.matches) {
-                speedUpAnimation = null;
-                drawFrame(performance.now());
                 return;
             }
 
@@ -159,10 +155,7 @@
         const draw = (time: number) => {
             animationFrame = null;
             drawFrame(time);
-
-            if (!reducedMotionQuery.matches && onScreen) {
-                animationFrame = requestAnimationFrame(draw);
-            }
+            requestAnimation();
         };
 
         const requestAnimation = () => {
@@ -172,6 +165,11 @@
             }
 
             animationFrame = requestAnimationFrame(draw);
+        };
+
+        const resumeAnimation = () => {
+            lastFrameTime = null;
+            requestAnimation();
         };
 
         applyResize();
@@ -206,8 +204,7 @@
                 return;
             }
 
-            lastFrameTime = null;
-            requestAnimation();
+            resumeAnimation();
         });
         intersectionObserver.observe(canvas);
 
@@ -223,8 +220,7 @@
                 return;
             }
 
-            lastFrameTime = null;
-            requestAnimation();
+            resumeAnimation();
         };
 
         colorSchemeQuery.addEventListener("change", scheduleColorRead);
