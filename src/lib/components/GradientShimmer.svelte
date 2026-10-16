@@ -51,6 +51,7 @@
         let wavePhase = Shimmer.getRandomWavePhase();
         let secondaryWavePhase = -wavePhase * 0.7;
         let lastFrameTime: number | null = null;
+        let onScreen = true;
 
         const cancelResizeFrame = () => {
             if (resizeFrame === null) {
@@ -159,13 +160,14 @@
             animationFrame = null;
             drawFrame(time);
 
-            if (!reducedMotionQuery.matches) {
+            if (!reducedMotionQuery.matches && onScreen) {
                 animationFrame = requestAnimationFrame(draw);
             }
         };
 
         const requestAnimation = () => {
-            if (animationFrame !== null || reducedMotionQuery.matches) {
+            if (animationFrame !== null || reducedMotionQuery.matches ||
+                !onScreen) {
                 return;
             }
 
@@ -195,6 +197,19 @@
                 drawFrame(time);
             });
         };
+
+        const intersectionObserver = new IntersectionObserver(([entry]) => {
+            onScreen = entry?.isIntersecting ?? true;
+
+            if (!onScreen) {
+                cancelAnimation();
+                return;
+            }
+
+            lastFrameTime = null;
+            requestAnimation();
+        });
+        intersectionObserver.observe(canvas);
 
         const themeObserver = new MutationObserver(scheduleColorRead);
         themeObserver.observe(document.documentElement, { attributes: true });
@@ -226,6 +241,7 @@
             cancelAnimation();
             cancelResizeFrame();
             resizeObserver.disconnect();
+            intersectionObserver.disconnect();
             themeObserver.disconnect();
             colorSchemeQuery.removeEventListener("change", scheduleColorRead);
             reducedMotionQuery.removeEventListener("change", updateMotionPreference);
