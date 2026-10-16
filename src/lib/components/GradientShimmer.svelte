@@ -265,6 +265,7 @@
         height: 100%;
         opacity: 0;
         pointer-events: none;
+        image-rendering: pixelated;
         transition: opacity 0.3s;
     }
 

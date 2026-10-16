@@ -407,7 +407,9 @@ const readShaderColors = (
 
 const getCanvasSize = (canvas: HTMLCanvasElement): Size => {
     const { width, height } = canvas.getBoundingClientRect();
-    const dpr = globalThis.devicePixelRatio || 1;
+    // Grain cells are CSS pixels and the gradient is smooth, so rendering
+    // above CSS resolution adds nothing. The canvas is upscaled pixelated.
+    const dpr = Math.min(globalThis.devicePixelRatio || 1, 1);
     const cssWidth = Math.max(1, width);
     const cssHeight = Math.max(1, height);
 
