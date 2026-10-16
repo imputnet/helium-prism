@@ -1,4 +1,4 @@
-import { Mesh, Program, Renderer, Triangle } from "ogl";
+import { Geometry, Mesh, Program, Renderer, Texture } from "ogl";
 import FRAGMENT_SHADER_SOURCE from "./shaders/gradient-shimmer.frag.glsl?raw";
 import VERTEX_SHADER_SOURCE from "./shaders/gradient-shimmer.vert.glsl?raw";
 
@@ -40,6 +40,14 @@ export const IDLE_WAVE = {
 };
 
 const FULL_CIRCLE = Math.PI * 2;
+
+const GRAIN = {
+    size: 180,
+    hashScale: [127.1, 311.7],
+    hashOffset: 43758.5,
+    // Luminance, then the red, green and blue color shifts.
+    channelOffsets: [[0, 0], [17, 3], [7, 29], [31, 11]],
+} as const;
 
 export type IntroAnimation = {
     startedAt: number;
@@ -96,7 +104,6 @@ type ShaderColors = {
 type StripeMetrics = {
     count: number;
     width: number;
-    inverseWidth: number;
     maxIndex: number;
     introCenterIndex: number;
     introCenterDistance: number;
@@ -107,6 +114,49 @@ type RenderMetrics = {
     gradientTop: number;
     gradientVerticalSpan: number;
     inverseGradientDenominator: number;
+};
+
+// Grain is static, so it's hashed once here instead of per pixel every frame.
+const createGrainNoise = () => {
+    const { size, hashScale, hashOffset, channelOffsets } = GRAIN;
+    const data = new Uint8Array(size * size * channelOffsets.length);
+    let index = 0;
+
+    for (let y = 0; y < size; y++) {
+        for (let x = 0; x < size; x++) {
+            for (const [offsetX, offsetY] of channelOffsets) {
+                const hash = Math.sin(
+                    (x + offsetX) * hashScale[0] + (y + offsetY) * hashScale[1],
+                ) * hashOffset;
+
+                data[index++] = Math.round((hash - Math.floor(hash)) * 255);
+            }
+        }
+    }
+
+    return data;
+};
+
+// One instanced quad per stripe. The vertex shader takes the stripe index
+// from gl_InstanceID, so no per-instance attribute is needed.
+const createStripeGeometry = (gl: Renderer["gl"]) => {
+    const geometry = new Geometry(gl, {
+        position: {
+            size: 2,
+            data: new Float32Array([
+                0, -1,
+                1, -1,
+                0, 1,
+                0, 1,
+                1, -1,
+                1, 1,
+            ]),
+        },
+    });
+
+    geometry.isInstanced = true;
+
+    return geometry;
 };
 
 type GradientShimmerRenderer = {
@@ -178,7 +228,6 @@ const getStripeMetrics = (width: number): StripeMetrics => {
     return {
         count,
         width: stripeWidth,
-        inverseWidth: 1 / stripeWidth,
         maxIndex,
         introCenterIndex: maxIndex / 2,
         introCenterDistance: count % 2 === 0 ? 0.5 : 0,
@@ -243,12 +292,11 @@ export const isIntroComplete = (
     return time >= completeAt;
 };
 
-const createShaderUniforms = () => ({
+const createShaderUniforms = (grainNoise: Texture) => ({
     u_size: { value: [1, 1] },
     u_inverse_dpr: { value: 1 },
     u_stripe_max_index: { value: 0 },
     u_stripe_width: { value: 1 },
-    u_inverse_stripe_width: { value: 1 },
     u_gradient_top: { value: 0 },
     u_gradient_vertical_span: { value: 1 },
     u_inverse_gradient_denominator: { value: 1 },
@@ -266,6 +314,7 @@ const createShaderUniforms = () => ({
     u_grain_luminance: { value: 0 },
     u_grain_contrast: { value: 0 },
     u_grain_saturation: { value: 0 },
+    u_grain_noise: { value: grainNoise },
     u_intro_center_index: { value: 0 },
     u_intro_center_distance: { value: 0 },
     u_gradient_band_width: { value: GRADIENT.bandWidth },
@@ -377,7 +426,9 @@ const readShaderColors = (
 
 const getCanvasSize = (canvas: HTMLCanvasElement): Size => {
     const { width, height } = canvas.getBoundingClientRect();
-    const dpr = globalThis.devicePixelRatio || 1;
+    // Grain cells are CSS pixels and the gradient is smooth, so rendering
+    // above CSS resolution adds nothing. The canvas is upscaled pixelated.
+    const dpr = Math.min(globalThis.devicePixelRatio || 1, 1);
     const cssWidth = Math.max(1, width);
     const cssHeight = Math.max(1, height);
 
@@ -440,9 +491,18 @@ export const createGradientShimmerRenderer = (
         return null;
     }
 
-    const uniforms = createShaderUniforms();
+    const grainNoise = new Texture(gl, {
+        image: createGrainNoise(),
+        width: GRAIN.size,
+        height: GRAIN.size,
+        generateMipmaps: false,
+        minFilter: gl.NEAREST,
+        magFilter: gl.NEAREST,
+        flipY: false,
+    });
+    const uniforms = createShaderUniforms(grainNoise);
     let program: Program | null = null;
-    let geometry: Triangle | null = null;
+    let geometry: Geometry | null = null;
     let mesh: Mesh | null = null;
     let initialColors: ShaderColors | null = null;
 
@@ -456,7 +516,7 @@ export const createGradientShimmerRenderer = (
             depthWrite: false,
             transparent: false,
         });
-        geometry = new Triangle(gl);
+        geometry = createStripeGeometry(gl);
         mesh = new Mesh(gl, {
             geometry,
             program,
@@ -466,6 +526,7 @@ export const createGradientShimmerRenderer = (
     } catch {
         geometry?.remove();
         program?.remove();
+        gl.deleteTexture(grainNoise.texture);
         return null;
     }
 
@@ -473,19 +534,46 @@ export const createGradientShimmerRenderer = (
         return null;
     }
 
-    let size = initialSize;
-    let stripes = getStripeMetrics(size.width);
-    let renderMetrics = getRenderMetrics(size, stripes);
-    let colors = initialColors;
+    let stripes = getStripeMetrics(initialSize.width);
+
+    const applySize = (size: Size) => {
+        stripes = getStripeMetrics(size.width);
+        const renderMetrics = getRenderMetrics(size, stripes);
+
+        geometry.setInstancedCount(stripes.count);
+        uniforms.u_size.value = [size.width, size.height];
+        uniforms.u_inverse_dpr.value = renderMetrics.inverseDpr;
+        uniforms.u_stripe_max_index.value = stripes.maxIndex;
+        uniforms.u_stripe_width.value = stripes.width;
+        uniforms.u_gradient_top.value = renderMetrics.gradientTop;
+        uniforms.u_gradient_vertical_span.value = renderMetrics.gradientVerticalSpan;
+        uniforms.u_inverse_gradient_denominator.value =
+            renderMetrics.inverseGradientDenominator;
+        uniforms.u_intro_center_index.value = stripes.introCenterIndex;
+        uniforms.u_intro_center_distance.value = stripes.introCenterDistance;
+    };
+
+    const applyColors = (colors: ShaderColors) => {
+        uniforms.u_start_color.value = colors.start;
+        uniforms.u_highlight_delta.value = colors.highlightDelta;
+        uniforms.u_alpha.value = colors.alpha;
+        uniforms.u_intro_alpha.value = colors.introAlpha;
+        uniforms.u_speed_up_shine_boost.value = colors.speedUpShineBoost;
+        uniforms.u_grain_alpha.value = colors.grainAlpha;
+        uniforms.u_grain_luminance.value = colors.grainLuminance;
+        uniforms.u_grain_contrast.value = colors.grainContrast;
+        uniforms.u_grain_saturation.value = colors.grainSaturation;
+    };
+
+    applySize(initialSize);
+    applyColors(initialColors);
 
     const resize = () => {
-        size = resizeOglCanvas(canvas, renderer);
-        stripes = getStripeMetrics(size.width);
-        renderMetrics = getRenderMetrics(size, stripes);
+        applySize(resizeOglCanvas(canvas, renderer));
     };
 
     const readColors = () => {
-        colors = readShaderColors(canvas, colorContext);
+        applyColors(readShaderColors(canvas, colorContext));
     };
 
     return {
@@ -498,15 +586,6 @@ export const createGradientShimmerRenderer = (
             introStartedAt,
             shineProgress,
         }) => {
-            uniforms.u_size.value = [size.width, size.height];
-            uniforms.u_inverse_dpr.value = renderMetrics.inverseDpr;
-            uniforms.u_stripe_max_index.value = stripes.maxIndex;
-            uniforms.u_stripe_width.value = stripes.width;
-            uniforms.u_inverse_stripe_width.value = stripes.inverseWidth;
-            uniforms.u_gradient_top.value = renderMetrics.gradientTop;
-            uniforms.u_gradient_vertical_span.value = renderMetrics.gradientVerticalSpan;
-            uniforms.u_inverse_gradient_denominator.value =
-                renderMetrics.inverseGradientDenominator;
             uniforms.u_wave_phase.value = wavePhase;
             uniforms.u_secondary_wave_phase.value = secondaryWavePhase;
             uniforms.u_intro_active.value = introStartedAt === null ? 0 : 1;
@@ -514,17 +593,6 @@ export const createGradientShimmerRenderer = (
                 ? 0
                 : time - introStartedAt - INTRO.delay;
             uniforms.u_shine_progress.value = shineProgress;
-            uniforms.u_intro_center_index.value = stripes.introCenterIndex;
-            uniforms.u_intro_center_distance.value = stripes.introCenterDistance;
-            uniforms.u_start_color.value = colors.start;
-            uniforms.u_highlight_delta.value = colors.highlightDelta;
-            uniforms.u_alpha.value = colors.alpha;
-            uniforms.u_intro_alpha.value = colors.introAlpha;
-            uniforms.u_speed_up_shine_boost.value = colors.speedUpShineBoost;
-            uniforms.u_grain_alpha.value = colors.grainAlpha;
-            uniforms.u_grain_luminance.value = colors.grainLuminance;
-            uniforms.u_grain_contrast.value = colors.grainContrast;
-            uniforms.u_grain_saturation.value = colors.grainSaturation;
 
             renderer.render({
                 scene: mesh,
@@ -537,6 +605,7 @@ export const createGradientShimmerRenderer = (
         dispose: () => {
             geometry.remove();
             program.remove();
+            gl.deleteTexture(grainNoise.texture);
         },
         getStripeCount: () => stripes.count,
     };
