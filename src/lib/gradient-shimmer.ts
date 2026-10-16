@@ -1,4 +1,4 @@
-import { Mesh, Program, Renderer, Texture, Triangle } from "ogl";
+import { Geometry, Mesh, Program, Renderer, Texture } from "ogl";
 import FRAGMENT_SHADER_SOURCE from "./shaders/gradient-shimmer.frag.glsl?raw";
 import VERTEX_SHADER_SOURCE from "./shaders/gradient-shimmer.vert.glsl?raw";
 
@@ -104,7 +104,6 @@ type ShaderColors = {
 type StripeMetrics = {
     count: number;
     width: number;
-    inverseWidth: number;
     maxIndex: number;
     introCenterIndex: number;
     introCenterDistance: number;
@@ -136,6 +135,28 @@ const createGrainNoise = () => {
     }
 
     return data;
+};
+
+// One instanced quad per stripe. The vertex shader takes the stripe index
+// from gl_InstanceID, so no per-instance attribute is needed.
+const createStripeGeometry = (gl: Renderer["gl"]) => {
+    const geometry = new Geometry(gl, {
+        position: {
+            size: 2,
+            data: new Float32Array([
+                0, -1,
+                1, -1,
+                0, 1,
+                0, 1,
+                1, -1,
+                1, 1,
+            ]),
+        },
+    });
+
+    geometry.isInstanced = true;
+
+    return geometry;
 };
 
 type GradientShimmerRenderer = {
@@ -207,7 +228,6 @@ const getStripeMetrics = (width: number): StripeMetrics => {
     return {
         count,
         width: stripeWidth,
-        inverseWidth: 1 / stripeWidth,
         maxIndex,
         introCenterIndex: maxIndex / 2,
         introCenterDistance: count % 2 === 0 ? 0.5 : 0,
@@ -277,7 +297,6 @@ const createShaderUniforms = (grainNoise: Texture) => ({
     u_inverse_dpr: { value: 1 },
     u_stripe_max_index: { value: 0 },
     u_stripe_width: { value: 1 },
-    u_inverse_stripe_width: { value: 1 },
     u_gradient_top: { value: 0 },
     u_gradient_vertical_span: { value: 1 },
     u_inverse_gradient_denominator: { value: 1 },
@@ -483,7 +502,7 @@ export const createGradientShimmerRenderer = (
     });
     const uniforms = createShaderUniforms(grainNoise);
     let program: Program | null = null;
-    let geometry: Triangle | null = null;
+    let geometry: Geometry | null = null;
     let mesh: Mesh | null = null;
     let initialColors: ShaderColors | null = null;
 
@@ -497,7 +516,7 @@ export const createGradientShimmerRenderer = (
             depthWrite: false,
             transparent: false,
         });
-        geometry = new Triangle(gl);
+        geometry = createStripeGeometry(gl);
         mesh = new Mesh(gl, {
             geometry,
             program,
@@ -521,11 +540,11 @@ export const createGradientShimmerRenderer = (
         stripes = getStripeMetrics(size.width);
         const renderMetrics = getRenderMetrics(size, stripes);
 
+        geometry.setInstancedCount(stripes.count);
         uniforms.u_size.value = [size.width, size.height];
         uniforms.u_inverse_dpr.value = renderMetrics.inverseDpr;
         uniforms.u_stripe_max_index.value = stripes.maxIndex;
         uniforms.u_stripe_width.value = stripes.width;
-        uniforms.u_inverse_stripe_width.value = stripes.inverseWidth;
         uniforms.u_gradient_top.value = renderMetrics.gradientTop;
         uniforms.u_gradient_vertical_span.value = renderMetrics.gradientVerticalSpan;
         uniforms.u_inverse_gradient_denominator.value =
