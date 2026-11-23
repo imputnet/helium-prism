@@ -76,12 +76,10 @@ jobs:
 
       - name: Create release
         if: steps.version.outputs.create == 'true'
-        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844
+        uses: imputnet/immutable-release@v1
         with:
-          token: ${{ github.token }}
-          tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
-          target_commitish: ${{ github.sha }}
+          tag: ${{ steps.version.outputs.tag }}
+          latest: true
 
       - name: Publish package
         if: steps.version.outputs.tag != ''
